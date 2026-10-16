@@ -155,6 +155,7 @@ audio.sample{width:100%;height:34px;margin-top:6px}
       <button class="tab active" data-tab="media">📁 Media</button>
       <button class="tab" data-tab="subs">📝 Subtitr</button>
       <button class="tab" data-tab="ai">🤖 AI Ovoz</button>
+      <button class="tab" data-tab="viz">🎵 Vizual</button>
       <button class="tab" data-tab="settings">⚙️ Sozlama</button>
     </div>
 
@@ -272,6 +273,54 @@ audio.sample{width:100%;height:34px;margin-top:6px}
         <button class="btn green full" data-act="runClone">🧬 Mening ovozimda yaratish</button>
         <div class="note warn"><b>Bilish kerak:</b> bu Hugging Face'dagi bepul server (Chatterbox) orqali ishlaydi — internet kerak va <b>kunlik bepul limit</b> bor. Limit tugasa: ertaga qayta urining yoki bepul Hugging Face akkaunt ochib, token kiriting. O'zbek tili rasmiy qo'llab-quvvatlanmaydi — talaffuz turkchaga o'xshab chiqishi mumkin.</div>
       </div>
+    </div>
+
+    <!-- AUDIO VIZUALIZATOR -->
+    <div class="tabpage" id="tab-viz">
+      <div class="sec">
+        <h3>🎵 Audio vizualizator <span class="tag">BEPUL</span></h3>
+        <label class="chk"><input type="checkbox" id="viz-on"> Videoda ko'rsatish (ovozga qarab o'ynaydi)</label>
+        <label class="f">Uslub</label>
+        <select id="viz-style">
+          <option value="bars">📊 Ustunchalar</option>
+          <option value="mirror">🪞 Ko'zgu ustunchalar (tepa-past)</option>
+          <option value="led">🟩 Ekvalayzer (LED kubiklar)</option>
+          <option value="mountain">⛰️ Tog' (to'lqinli spektr)</option>
+          <option value="wave">〰️ Tovush to'lqini (chiziq)</option>
+          <option value="circle">⭕ Aylana</option>
+        </select>
+        <label class="f">Tayyor ranglar</label>
+        <div class="btnrow" style="margin-top:0;flex-wrap:wrap">
+          <button class="btn sm" data-act="vizPreset" data-c1="#00d2ff" data-c2="#ff3cac">💙💗 Neon</button>
+          <button class="btn sm" data-act="vizPreset" data-c1="#ffd700" data-c2="#ff6a00">💛🧡 Oltin</button>
+          <button class="btn sm" data-act="vizPreset" data-c1="#00ff87" data-c2="#60efff">💚 Yashil</button>
+          <button class="btn sm" data-act="vizPreset" data-c1="#ffffff" data-c2="#c8d6e5">🤍 Oq</button>
+          <button class="btn sm" data-act="vizPreset" data-c1="#ff0000" data-c2="#ffcc00">❤️ Qizil</button>
+          <button class="btn sm" data-act="vizPreset" data-c1="#8e2de2" data-c2="#4a00e0">💜 Binafsha</button>
+        </div>
+        <div class="row">
+          <div><label class="f">1-rang</label><input type="color" id="viz-c1" value="#00d2ff"></div>
+          <div><label class="f">2-rang</label><input type="color" id="viz-c2" value="#ff3cac"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="viz-glow" checked> Yorqin nur (glow)</label>
+      </div>
+      <div class="sec">
+        <h3>📐 Joyi va o'lchami</h3>
+        <label class="f">Joylashuv</label>
+        <select id="viz-pos"><option value="bottom">Pastda</option><option value="middle">O'rtada</option><option value="top">Tepada</option></select>
+        <div class="row">
+          <div><label class="f">Balandligi</label><input type="range" id="viz-h" min="8" max="60" value="22"></div>
+          <div><label class="f">Kengligi</label><input type="range" id="viz-w" min="30" max="100" value="80"></div>
+        </div>
+        <div class="row">
+          <div><label class="f">Ustunchalar soni</label><input type="range" id="viz-n" min="16" max="128" step="4" value="64"></div>
+          <div><label class="f">Shaffoflik</label><input type="range" id="viz-op" min="0.2" max="1" step="0.05" value="0.9"></div>
+        </div>
+        <label class="f">Sezgirlik (past ovozda ham ko'proq o'ynashi uchun oshiring)</label>
+        <input type="range" id="viz-sens" min="0.5" max="2.5" step="0.1" value="1.2">
+      </div>
+      <div class="note">⏸ To'xtab turganda namuna ko'rinish chiziladi. <b>▶ Ijro</b> bosganda va <b>eksportda</b> haqiqiy ovozga qarab o'ynaydi (musiqa + diktor + video ovozi).</div>
+      <div class="note ok">💡 Musiqa kanali uchun: bitta rasm + musiqa qo'ying, uslubni <b>"Aylana"</b> yoki <b>"Ko'zgu"</b> qilib, joyini <b>"O'rtada"</b> tanlang.</div>
     </div>
 
     <!-- SOZLAMALAR -->
@@ -469,7 +518,9 @@ $('m-btn').onclick = () => { const f = Modal.onCancel; Modal.hide(); if (f) f();
 const DEFAULT_SETTINGS = {
     res: '1920x1080', fps: '30|10000000', effect: 'none', transition: 'fade', vzoom: false,
     imgDur: 5, duck: true, subOn: true, subStyle: 'youtube', subSize: 46, subPos: 'bottom',
-    logoId: '', logoCorner: 'tr', logoSize: 12, logoOp: 0.85
+    logoId: '', logoCorner: 'tr', logoSize: 12, logoOp: 0.85,
+    vizOn: false, vizStyle: 'bars', vizC1: '#00d2ff', vizC2: '#ff3cac', vizGlow: true,
+    vizPos: 'bottom', vizH: 22, vizW: 80, vizN: 64, vizOp: 0.9, vizSens: 1.2
 };
 let P = { settings: { ...DEFAULT_SETTINGS }, vclips: [], aclips: [], texts: [], subs: [] };
 const media = new Map();   // id -> {id, kind, name, file, url, duration, width, height, img, thumb}
@@ -685,7 +736,7 @@ async function deleteMedia(id) {
 /* =========================================================
    OVOZ TIZIMI (Web Audio) VA IJRO
    ========================================================= */
-let audioCtx = null, masterGain = null, previewGain = null, recDest = null;
+let audioCtx = null, masterGain = null, previewGain = null, recDest = null, analyser = null;
 const rt = new Map();  // clipId -> {el, mediaId, src, gain}
 
 function ensureAudio() {
@@ -696,6 +747,8 @@ function ensureAudio() {
         recDest = audioCtx.createMediaStreamDestination();
         masterGain.connect(previewGain); previewGain.connect(audioCtx.destination);
         masterGain.connect(recDest);
+        analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.78;
+        masterGain.connect(analyser);   // vizualizator uchun (karnay ovoziga bog'liq emas)
         previewGain.gain.value = previewVolume();
         rt.forEach(connectRT);
     }
@@ -851,6 +904,7 @@ function loop(ts) {
         return;
     }
     syncMedia(t, false);
+    vizTick++;
     drawFrame(pctx, pcanvas.width, pcanvas.height, t);
     if (exporting) { drawFrame(ectx, ecanvas.width, ecanvas.height, t); exportProgress(t, D); }
     updatePlayheadUI(t, true);
@@ -906,6 +960,8 @@ function drawFrame(ctx, W, H, t) {
             }
         }
     }
+    // Audio vizualizator
+    if (S.vizOn) drawViz(ctx, W, H, k);
     // Sarlavhalar
     for (const x of P.texts) {
         if (t < x.start || t >= x.start + x.dur) continue;
@@ -926,6 +982,136 @@ function drawFrame(ctx, W, H, t) {
         const x = S.logoCorner.includes('l') ? pad : W - lw - pad;
         const y = S.logoCorner.includes('t') ? pad : H - lh - pad;
         ctx.globalAlpha = S.logoOp; ctx.drawImage(lm.img, x, y, lw, lh); ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+}
+
+/* =========================================================
+   AUDIO VIZUALIZATOR (ovozga qarab o'ynaydigan ustunchalar)
+   ========================================================= */
+let vizTick = 0, vizLastTick = -1, vizBars = new Float32Array(0), vizWave = new Float32Array(256);
+let vizFreqBuf = null, vizTimeBuf = null;
+
+function vizUpdate(n) {
+    if (vizBars.length !== n) vizBars = new Float32Array(n);
+    const live = playing && analyser;
+    if (!live) {   // to'xtab turganda — namuna ko'rinish
+        for (let i = 0; i < n; i++) {
+            const f = i / n;
+            vizBars[i] = clamp(0.25 + 0.45 * Math.abs(Math.sin(f * 9.3 + 0.6)) * (1 - f * 0.55) + 0.15 * Math.abs(Math.sin(f * 31)), 0.05, 1);
+        }
+        for (let i = 0; i < vizWave.length; i++) { const f = i / vizWave.length; vizWave[i] = 0.55 * Math.sin(f * Math.PI * 6) * Math.sin(f * Math.PI); }
+        vizLastTick = -1; return;
+    }
+    if (vizTick === vizLastTick) return;   // preview va eksport bir kadrda bir xil ma'lumotni ishlatadi
+    vizLastTick = vizTick;
+    const bins = analyser.frequencyBinCount;
+    if (!vizFreqBuf || vizFreqBuf.length !== bins) { vizFreqBuf = new Uint8Array(bins); vizTimeBuf = new Uint8Array(analyser.fftSize); }
+    analyser.getByteFrequencyData(vizFreqBuf);
+    analyser.getByteTimeDomainData(vizTimeBuf);
+    const sens = P.settings.vizSens || 1, ny = audioCtx.sampleRate / 2;
+    const fMin = 40, fMax = Math.min(14000, ny);
+    for (let i = 0; i < n; i++) {
+        const f0 = fMin * Math.pow(fMax / fMin, i / n), f1 = fMin * Math.pow(fMax / fMin, (i + 1) / n);
+        let b0 = Math.floor(f0 / ny * bins), b1 = Math.max(b0 + 1, Math.ceil(f1 / ny * bins));
+        b1 = Math.min(b1, bins);
+        let sum = 0; for (let b = b0; b < b1; b++) sum += vizFreqBuf[b];
+        let v = sum / Math.max(1, b1 - b0) / 255;
+        v = Math.pow(v, 1.6) * sens * (1 + 0.6 * i / n);    // baland chastotalar ham ko'rinsin
+        v = clamp(v, 0, 1);
+        vizBars[i] = Math.max(v, vizBars[i] - 0.035);        // silliq tushish
+    }
+    const step = vizTimeBuf.length / vizWave.length;
+    for (let i = 0; i < vizWave.length; i++) vizWave[i] = clamp((vizTimeBuf[Math.floor(i * step)] - 128) / 128 * sens * 2.2, -1, 1);
+}
+
+function hexRGB(h) { const n = parseInt(String(h).replace('#', ''), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function mixColor(c1, c2, f) {
+    const a = hexRGB(c1), b = hexRGB(c2);
+    return `rgb(${Math.round(a[0] + (b[0] - a[0]) * f)},${Math.round(a[1] + (b[1] - a[1]) * f)},${Math.round(a[2] + (b[2] - a[2]) * f)})`;
+}
+function rrect(ctx, x, y, w, h, r) {
+    r = Math.max(0, Math.min(r, w / 2, Math.abs(h) / 2));
+    if (h < 0) { y += h; h = -h; }
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+
+function drawViz(ctx, W, H, k) {
+    const S = P.settings, style = S.vizStyle || 'bars';
+    const n = style === 'wave' ? 0 : clamp(Math.round(S.vizN || 64), 8, 256);
+    vizUpdate(Math.max(n, 8));
+    const c1 = S.vizC1 || '#00d2ff', c2 = S.vizC2 || '#ff3cac';
+    const rw = W * clamp(S.vizW, 10, 100) / 100, rh = H * clamp(S.vizH, 4, 80) / 100;
+    const x0 = (W - rw) / 2, margin = H * 0.05;
+    const y0 = S.vizPos === 'top' ? margin : S.vizPos === 'middle' ? (H - rh) / 2 : H - rh - margin;
+    const down = S.vizPos === 'top';       // tepada bo'lsa ustunchalar pastga qarab o'sadi
+    ctx.save();
+    ctx.globalAlpha = clamp(S.vizOp ?? 0.9, 0, 1);
+    if (S.vizGlow) { ctx.shadowBlur = 18 * k; ctx.shadowColor = c1; }
+    const grad = () => { const g = ctx.createLinearGradient(x0, 0, x0 + rw, 0); g.addColorStop(0, c1); g.addColorStop(1, c2); return g; };
+
+    if (style === 'bars' || style === 'mirror') {
+        const slot = rw / n, bw = Math.max(1, slot * 0.68), r = bw / 2;
+        for (let i = 0; i < n; i++) {
+            const v = vizBars[i], x = x0 + i * slot + (slot - bw) / 2;
+            ctx.fillStyle = mixColor(c1, c2, i / (n - 1 || 1));
+            if (style === 'mirror') {
+                const h = Math.max(bw, v * rh), cy = y0 + rh / 2;
+                rrect(ctx, x, cy - h / 2, bw, h, r); ctx.fill();
+            } else {
+                const h = Math.max(bw, v * rh);
+                rrect(ctx, x, down ? y0 : y0 + rh - h, bw, h, r); ctx.fill();
+            }
+        }
+    } else if (style === 'led') {
+        const slot = rw / n, bw = Math.max(1, slot * 0.78), rows = 14, cell = rh / rows, ch = cell * 0.72;
+        for (let i = 0; i < n; i++) {
+            const lit = Math.round(vizBars[i] * rows), x = x0 + i * slot + (slot - bw) / 2;
+            for (let j = 0; j < lit; j++) {
+                ctx.fillStyle = mixColor(c1, c2, j / (rows - 1));
+                const y = down ? y0 + j * cell : y0 + rh - (j + 1) * cell + (cell - ch);
+                ctx.fillRect(x, y, bw, ch);
+            }
+        }
+    } else if (style === 'mountain') {
+        const base = down ? y0 : y0 + rh, dir = down ? 1 : -1;
+        const pts = [];
+        for (let i = 0; i < n; i++) pts.push([x0 + (i + 0.5) * rw / n, base + dir * vizBars[i] * rh]);
+        ctx.beginPath(); ctx.moveTo(x0, base); ctx.lineTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) { const mx = (pts[i - 1][0] + pts[i][0]) / 2, my = (pts[i - 1][1] + pts[i][1]) / 2; ctx.quadraticCurveTo(pts[i - 1][0], pts[i - 1][1], mx, my); }
+        ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]); ctx.lineTo(x0 + rw, base); ctx.closePath();
+        const g = ctx.createLinearGradient(0, base + dir * rh, 0, base);
+        g.addColorStop(0, c2); g.addColorStop(1, mixColor(c1, '#000000', 0.2));
+        ctx.fillStyle = g; ctx.fill();
+        ctx.lineWidth = 3 * k; ctx.strokeStyle = grad(); ctx.stroke();
+    } else if (style === 'wave') {
+        const cy = y0 + rh / 2, m = vizWave.length;
+        ctx.lineWidth = Math.max(2, 5 * k); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = grad();
+        ctx.beginPath();
+        for (let i = 0; i < m; i++) { const x = x0 + i / (m - 1) * rw, y = cy + vizWave[i] * rh / 2; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.stroke();
+        ctx.globalAlpha *= 0.35; ctx.lineWidth = Math.max(1, 2 * k);   // ikkinchi (aks) chiziq
+        ctx.beginPath();
+        for (let i = 0; i < m; i++) { const x = x0 + i / (m - 1) * rw, y = cy - vizWave[i] * rh / 3; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.stroke();
+    } else if (style === 'circle') {
+        const cx = W / 2, cy = y0 + rh / 2, R = Math.min(rw, rh) * 0.32, L = Math.min(rw, rh) * 0.18;
+        const avg = vizBars.slice(0, n).reduce((a, b) => a + b, 0) / n;
+        const Rp = R * (1 + avg * 0.12);     // bit (zarb) bilan aylana biroz kattalashadi
+        ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, (2 * Math.PI * Rp / (n * 2)) * 0.8);
+        for (let i = 0; i < n * 2; i++) {    // ikki tomonga simmetrik
+            const idx = i < n ? i : 2 * n - 1 - i, v = vizBars[idx];
+            const ang = -Math.PI / 2 + i / (n * 2) * Math.PI * 2;
+            const r1 = Rp + 4 * k, r2 = Rp + 4 * k + Math.max(3 * k, v * L * 2.2);
+            ctx.strokeStyle = mixColor(c1, c2, idx / (n - 1 || 1));
+            ctx.beginPath(); ctx.moveTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1); ctx.lineTo(cx + Math.cos(ang) * r2, cy + Math.sin(ang) * r2); ctx.stroke();
+        }
+        ctx.lineWidth = 3 * k; ctx.strokeStyle = c1;
+        ctx.beginPath(); ctx.arc(cx, cy, Rp, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
 }
@@ -1737,20 +1923,29 @@ function syncSettingsUI() {
     $('set-duck').checked = S.duck; $('set-logo').value = S.logoId || ''; $('set-logo-corner').value = S.logoCorner;
     $('set-logo-size').value = S.logoSize; $('set-logo-op').value = S.logoOp;
     $('sub-on').checked = S.subOn; $('sub-size').value = S.subSize; $('sub-pos').value = S.subPos;
+    $('viz-on').checked = S.vizOn; $('viz-style').value = S.vizStyle; $('viz-c1').value = S.vizC1; $('viz-c2').value = S.vizC2;
+    $('viz-glow').checked = S.vizGlow; $('viz-pos').value = S.vizPos; $('viz-h').value = S.vizH; $('viz-w').value = S.vizW;
+    $('viz-n').value = S.vizN; $('viz-op').value = S.vizOp; $('viz-sens').value = S.vizSens;
     renderStyleGrid(); resizePreview();
 }
 const SETTING_INPUTS = { 'set-res': 'res', 'set-fps': 'fps', 'set-effect': 'effect', 'set-transition': 'transition', 'set-vzoom': 'vzoom', 'set-imgdur': 'imgDur',
-    'set-duck': 'duck', 'set-logo': 'logoId', 'set-logo-corner': 'logoCorner', 'set-logo-size': 'logoSize', 'set-logo-op': 'logoOp', 'sub-on': 'subOn', 'sub-size': 'subSize', 'sub-pos': 'subPos' };
+    'set-duck': 'duck', 'set-logo': 'logoId', 'set-logo-corner': 'logoCorner', 'set-logo-size': 'logoSize', 'set-logo-op': 'logoOp', 'sub-on': 'subOn', 'sub-size': 'subSize', 'sub-pos': 'subPos',
+    'viz-on': 'vizOn', 'viz-style': 'vizStyle', 'viz-c1': 'vizC1', 'viz-c2': 'vizC2', 'viz-glow': 'vizGlow', 'viz-pos': 'vizPos',
+    'viz-h': 'vizH', 'viz-w': 'vizW', 'viz-n': 'vizN', 'viz-op': 'vizOp', 'viz-sens': 'vizSens' };
 Object.entries(SETTING_INPUTS).forEach(([id, key]) => {
     const el = $(id);
     const h = () => {
         let v = el.type === 'checkbox' ? el.checked : el.value;
-        if (['logoSize', 'logoOp', 'subSize', 'imgDur'].includes(key)) v = Number(v);
+        if (['logoSize', 'logoOp', 'subSize', 'imgDur', 'vizH', 'vizW', 'vizN', 'vizOp', 'vizSens'].includes(key)) v = Number(v);
+        if (key === 'vizStyle' && v === 'circle' && P.settings.vizPos !== 'middle') {   // aylana o'rtada chiroyli
+            P.settings.vizPos = 'middle'; $('viz-pos').value = 'middle';
+            if (P.settings.vizH < 40) { P.settings.vizH = 50; $('viz-h').value = 50; }
+        }
         P.settings[key] = v;
         if (key === 'res') resizePreview(); else drawPreview();
         scheduleSave();
     };
-    el.addEventListener(el.type === 'range' ? 'input' : 'change', h);
+    el.addEventListener(el.type === 'range' || el.type === 'color' ? 'input' : 'change', h);
 });
 
 function changed() {
@@ -1800,7 +1995,12 @@ const ACT = {
     cueGo: b => { const c = P.subs.find(x => x.id === b.dataset.id); if (c) { seek(c.start + 0.01); sel = { kind: 's', id: c.id }; renderTimeline(); renderProps(); } },
     cueDel: b => { pushUndo(); P.subs = P.subs.filter(x => x.id !== b.dataset.id); changed(); },
     runASR, runTTS: () => runTTS(false), runTTSDub: () => runTTS(true),
-    recordSample, uploadSample: () => $('sample-input').click(), runClone
+    recordSample, uploadSample: () => $('sample-input').click(), runClone,
+    vizPreset: b => {
+        P.settings.vizC1 = b.dataset.c1; P.settings.vizC2 = b.dataset.c2; P.settings.vizOn = true;
+        $('viz-c1').value = b.dataset.c1; $('viz-c2').value = b.dataset.c2; $('viz-on').checked = true;
+        drawPreview(); scheduleSave();
+    }
 };
 document.addEventListener('click', e => {
     const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
