@@ -13,7 +13,7 @@ Brauzerda ishlaydigan **bepul video montaj dasturi**. O'rnatish shart emas.
 - ⌨️ Matndan ovozga: o'zbek, koreys, rus, ingliz (MMS-TTS, bepul)
 - 🧬 Ovoz klonlash (Chatterbox, Hugging Face bepul server — kunlik limit bor)
 - 🎙️ Mikrofondan diktor ovozi yozish
-- 🎵 Audio vizualizator: ovozga qarab o'ynaydigan ustunchalar (6 uslub: ustuncha, ko'zgu, LED ekvalayzer, tog', to'lqin, aylana)
+- 🎵 Audio vizualizator: 17 uslub (Trap Nation, zarrachali aylana, NCS, Monstercat, klassik qopqoqli, LED ekvalayzer, lenta va boshqalar), aylana o'rtasida logotip
 - 🎨 Rang effektlari, logotip, 12 ta subtitr uslubi
 - 🎬 Eksport: Full HD, 4K, Shorts (9:16)
 - 💾 Loyiha avtomatik saqlanadi

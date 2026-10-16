@@ -59,6 +59,11 @@ input[type=range]{width:100%;accent-color:var(--red)}
 .media-item .acts button:hover{border-color:var(--cyan)}
 .media-item .acts button.add{background:var(--red);border-color:var(--red)}
 .style-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.viz-gal{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.viz-gal button{background:#070b18;border:1px solid var(--line);border-radius:6px;padding:3px 3px 4px;color:var(--muted);font-size:10.5px;cursor:pointer;line-height:1.2}
+.viz-gal button canvas{display:block;width:100%;aspect-ratio:16/9;border-radius:4px;margin-bottom:3px;background:#000}
+.viz-gal button.on{border-color:var(--red);color:#fff;box-shadow:0 0 0 1px var(--red)}
+.viz-gal button .hot{color:#ffb020}
 .style-btn{background:#2b2f3a;border:1px solid var(--line);padding:8px 3px;border-radius:5px;cursor:pointer;font-size:12px;text-align:center;min-height:38px;display:flex;align-items:center;justify-content:center}
 .style-btn.active{border:2px solid var(--cyan);box-shadow:0 0 8px rgba(0,168,255,.4)}
 .cue{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px}
@@ -280,15 +285,11 @@ audio.sample{width:100%;height:34px;margin-top:6px}
       <div class="sec">
         <h3>🎵 Audio vizualizator <span class="tag">BEPUL</span></h3>
         <label class="chk"><input type="checkbox" id="viz-on"> Videoda ko'rsatish (ovozga qarab o'ynaydi)</label>
-        <label class="f">Uslub</label>
-        <select id="viz-style">
-          <option value="bars">📊 Ustunchalar</option>
-          <option value="mirror">🪞 Ko'zgu ustunchalar (tepa-past)</option>
-          <option value="led">🟩 Ekvalayzer (LED kubiklar)</option>
-          <option value="mountain">⛰️ Tog' (to'lqinli spektr)</option>
-          <option value="wave">〰️ Tovush to'lqini (chiziq)</option>
-          <option value="circle">⭕ Aylana</option>
-        </select>
+        <label class="f">Uslub (rasm ustiga bosing)</label>
+        <div class="viz-gal" id="viz-gallery"></div>
+        <select id="viz-style" style="margin-top:6px"></select>
+        <label class="chk"><input type="checkbox" id="viz-logo"> Aylana o'rtasiga kanal logotipini qo'yish</label>
+        <div class="note" style="margin-top:0">Logotipni <b>⚙️ Sozlama → Kanal logotipi</b> bo'limida tanlang (faqat aylana uslublarida ishlaydi).</div>
         <label class="f">Tayyor ranglar</label>
         <div class="btnrow" style="margin-top:0;flex-wrap:wrap">
           <button class="btn sm" data-act="vizPreset" data-c1="#00d2ff" data-c2="#ff3cac">💙💗 Neon</button>
@@ -520,7 +521,7 @@ const DEFAULT_SETTINGS = {
     imgDur: 5, duck: true, subOn: true, subStyle: 'youtube', subSize: 46, subPos: 'bottom',
     logoId: '', logoCorner: 'tr', logoSize: 12, logoOp: 0.85,
     vizOn: false, vizStyle: 'bars', vizC1: '#00d2ff', vizC2: '#ff3cac', vizGlow: true,
-    vizPos: 'bottom', vizH: 22, vizW: 80, vizN: 64, vizOp: 0.9, vizSens: 1.2
+    vizPos: 'bottom', vizH: 22, vizW: 80, vizN: 64, vizOp: 0.9, vizSens: 1.2, vizLogo: true
 };
 let P = { settings: { ...DEFAULT_SETTINGS }, vclips: [], aclips: [], texts: [], subs: [] };
 const media = new Map();   // id -> {id, kind, name, file, url, duration, width, height, img, thumb}
@@ -989,7 +990,30 @@ function drawFrame(ctx, W, H, t) {
 /* =========================================================
    AUDIO VIZUALIZATOR (ovozga qarab o'ynaydigan ustunchalar)
    ========================================================= */
+// [kalit, nomi, guruh, aylanami?, mashhurmi?]
+const VIZ_STYLES = [
+    ['trapnation', 'Trap Nation (qatlamli aylana)', 'Aylana', true, true],
+    ['particles', 'Zarrachali aylana', 'Aylana', true, true],
+    ['circle', 'Aylana ustunchalar', 'Aylana', true, true],
+    ['blob', 'Suyuq aylana (blob)', 'Aylana', true],
+    ['radialwave', 'Aylana to\'lqin', 'Aylana', true],
+    ['sunburst', 'Quyosh nurlari', 'Aylana', true],
+    ['ncs', 'NCS (markazdan simmetrik)', 'Ustunchalar', false, true],
+    ['monstercat', 'Monstercat (to\'rtburchak)', 'Ustunchalar', false, true],
+    ['peaks', 'Klassik (tushuvchi qopqoq)', 'Ustunchalar', false, true],
+    ['bars', 'Yumaloq ustunchalar', 'Ustunchalar', false],
+    ['reflect', 'Ko\'zgudagi aks (pol)', 'Ustunchalar', false],
+    ['mirror', 'Ko\'zgu (tepa-past)', 'Ustunchalar', false],
+    ['led', 'LED ekvalayzer', 'Ustunchalar', false, true],
+    ['dots', 'Nuqtali ustunlar', 'Ustunchalar', false],
+    ['ribbon', 'Lenta (simmetrik to\'lqin)', 'To\'lqin', false, true],
+    ['mountain', 'Tog\' (spektr)', 'To\'lqin', false],
+    ['wave', 'Tovush chizig\'i', 'To\'lqin', false]
+];
+const VIZ_ROUND = new Set(VIZ_STYLES.filter(x => x[3]).map(x => x[0]));
 let vizTick = 0, vizLastTick = -1, vizBars = new Float32Array(0), vizWave = new Float32Array(256);
+let vizPeaks = new Float32Array(0), vizBass = 0, vizParts = [], vizRand = 1;
+const vizRnd = () => (vizRand = (vizRand * 16807) % 2147483647) / 2147483647;
 let vizFreqBuf = null, vizTimeBuf = null;
 
 function vizUpdate(n) {
@@ -1001,6 +1025,13 @@ function vizUpdate(n) {
             vizBars[i] = clamp(0.25 + 0.45 * Math.abs(Math.sin(f * 9.3 + 0.6)) * (1 - f * 0.55) + 0.15 * Math.abs(Math.sin(f * 31)), 0.05, 1);
         }
         for (let i = 0; i < vizWave.length; i++) { const f = i / vizWave.length; vizWave[i] = 0.55 * Math.sin(f * Math.PI * 6) * Math.sin(f * Math.PI); }
+        if (vizPeaks.length !== n) vizPeaks = new Float32Array(n);
+        for (let i = 0; i < n; i++) vizPeaks[i] = Math.min(1, vizBars[i] + 0.08);
+        vizBass = 0.5;
+        if (vizParts.length < 60) {    // namuna zarrachalar
+            vizRand = 7; vizParts = [];
+            for (let i = 0; i < 70; i++) vizParts.push({ a: vizRnd() * Math.PI * 2, d: 1 + vizRnd() * 1.6, sp: 0.004 + vizRnd() * 0.01, s: 0.5 + vizRnd() * 1.5 });
+        }
         vizLastTick = -1; return;
     }
     if (vizTick === vizLastTick) return;   // preview va eksport bir kadrda bir xil ma'lumotni ishlatadi
@@ -1023,6 +1054,19 @@ function vizUpdate(n) {
     }
     const step = vizTimeBuf.length / vizWave.length;
     for (let i = 0; i < vizWave.length; i++) vizWave[i] = clamp((vizTimeBuf[Math.floor(i * step)] - 128) / 128 * sens * 2.2, -1, 1);
+    // Tushuvchi qopqoqlar (klassik uslub)
+    if (vizPeaks.length !== n) vizPeaks = new Float32Array(n);
+    for (let i = 0; i < n; i++) vizPeaks[i] = Math.max(vizBars[i], vizPeaks[i] - 0.012);
+    // Bas (zarb) kuchi
+    const nb = Math.max(2, Math.round(n * 0.12)); let bs = 0;
+    for (let i = 0; i < nb; i++) bs += vizBars[i];
+    vizBass = vizBass * 0.6 + (bs / nb) * 0.4;
+    // Zarrachalar: zarb kuchli bo'lsa ko'proq va tezroq uchadi
+    const spawn = Math.round(1 + vizBass * 5);
+    for (let i = 0; i < spawn && vizParts.length < 260; i++)
+        vizParts.push({ a: Math.random() * Math.PI * 2, d: 1, sp: 0.004 + Math.random() * 0.012, s: 0.5 + Math.random() * 1.5 });
+    const boost = 1 + vizBass * 5;
+    vizParts = vizParts.filter(q => (q.d += q.sp * boost) < 3.2);
 }
 
 function hexRGB(h) { const n = parseInt(String(h).replace('#', ''), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
@@ -1042,7 +1086,7 @@ function rrect(ctx, x, y, w, h, r) {
 
 function drawViz(ctx, W, H, k) {
     const S = P.settings, style = S.vizStyle || 'bars';
-    const n = style === 'wave' ? 0 : clamp(Math.round(S.vizN || 64), 8, 256);
+    const n = clamp(Math.round(S.vizN || 64), 8, 256);
     vizUpdate(Math.max(n, 8));
     const c1 = S.vizC1 || '#00d2ff', c2 = S.vizC2 || '#ff3cac';
     const rw = W * clamp(S.vizW, 10, 100) / 100, rh = H * clamp(S.vizH, 4, 80) / 100;
@@ -1112,8 +1156,218 @@ function drawViz(ctx, W, H, k) {
         }
         ctx.lineWidth = 3 * k; ctx.strokeStyle = c1;
         ctx.beginPath(); ctx.arc(cx, cy, Rp, 0, Math.PI * 2); ctx.stroke();
+        vizCenter(ctx, cx, cy, Rp - 2 * k, k);
+    } else if (style === 'peaks') {
+        const slot = rw / n, bw = Math.max(1, slot * 0.72), cap = Math.max(2, 4 * k), gap = Math.max(1, 2 * k);
+        for (let i = 0; i < n; i++) {
+            const x = x0 + i * slot + (slot - bw) / 2, h = Math.max(cap, vizBars[i] * (rh - cap - gap)), ph = vizPeaks[i] * (rh - cap - gap);
+            const g = ctx.createLinearGradient(0, y0 + rh, 0, y0); g.addColorStop(0, c1); g.addColorStop(1, c2);
+            ctx.fillStyle = g;
+            if (down) { ctx.fillRect(x, y0, bw, h); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y0 + ph + gap, bw, cap); }
+            else { ctx.fillRect(x, y0 + rh - h, bw, h); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y0 + rh - ph - gap - cap, bw, cap); }
+        }
+    } else if (style === 'reflect') {
+        const slot = rw / n, bw = Math.max(1, slot * 0.66), base = y0 + rh * 0.72, top = rh * 0.72, r = bw / 2;
+        for (let i = 0; i < n; i++) {
+            const x = x0 + i * slot + (slot - bw) / 2, h = Math.max(bw, vizBars[i] * top);
+            ctx.fillStyle = mixColor(c1, c2, i / (n - 1 || 1));
+            rrect(ctx, x, base - h, bw, h, r); ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * 0.28;    // poldagi aks
+        for (let i = 0; i < n; i++) {
+            const x = x0 + i * slot + (slot - bw) / 2, h = Math.max(bw, vizBars[i] * top) * 0.38;
+            ctx.fillStyle = mixColor(c1, c2, i / (n - 1 || 1));
+            rrect(ctx, x, base + 3 * k, bw, h, r); ctx.fill();
+        }
+        ctx.globalAlpha = a0;
+    } else if (style === 'ncs') {
+        const half = Math.max(4, Math.floor(n / 2)), slot = rw / (half * 2), bw = Math.max(1, slot * 0.62), cx = W / 2, r = bw / 2;
+        const cy = y0 + rh / 2;
+        for (let j = 0; j < half; j++) {
+            const v = vizBars[j], h = Math.max(bw, v * rh);
+            ctx.fillStyle = mixColor(c1, c2, j / (half - 1 || 1));
+            for (const sgn of [1, -1]) {
+                const x = cx + sgn * (j + 0.5) * slot - bw / 2;
+                rrect(ctx, x, cy - h / 2, bw, h, r); ctx.fill();
+            }
+        }
+    } else if (style === 'monstercat') {
+        const slot = rw / n, bw = Math.max(1, slot * 0.8), base = down ? y0 : y0 + rh;
+        for (let i = 0; i < n; i++) {
+            const x = x0 + i * slot + (slot - bw) / 2, h = Math.max(2 * k, vizBars[i] * rh);
+            ctx.fillStyle = mixColor(c1, c2, i / (n - 1 || 1));
+            ctx.fillRect(x, down ? base : base - h, bw, h);
+        }
+    } else if (style === 'dots') {
+        const slot = rw / n, d = Math.max(2, slot * 0.7), rows = Math.max(4, Math.floor(rh / (d * 1.25)));
+        for (let i = 0; i < n; i++) {
+            const lit = Math.max(1, Math.round(vizBars[i] * rows)), x = x0 + i * slot + slot / 2;
+            for (let j = 0; j < lit; j++) {
+                ctx.fillStyle = mixColor(c1, c2, j / (rows - 1 || 1));
+                const y = down ? y0 + (j + 0.5) * d * 1.25 : y0 + rh - (j + 0.5) * d * 1.25;
+                ctx.beginPath(); ctx.arc(x, y, d / 2, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+    } else if (style === 'ribbon') {
+        const cy = y0 + rh / 2, pts = [];
+        for (let i = 0; i < n; i++) pts.push([x0 + (i + 0.5) * rw / n, vizBars[i] * rh / 2]);
+        const curve = sgn => {
+            ctx.lineTo(pts[0][0], cy + sgn * pts[0][1]);
+            for (let i = 1; i < pts.length; i++) {
+                const mx = (pts[i - 1][0] + pts[i][0]) / 2, my = cy + sgn * (pts[i - 1][1] + pts[i][1]) / 2;
+                ctx.quadraticCurveTo(pts[i - 1][0], cy + sgn * pts[i - 1][1], mx, my);
+            }
+            ctx.lineTo(pts[pts.length - 1][0], cy + sgn * pts[pts.length - 1][1]);
+        };
+        ctx.beginPath(); ctx.moveTo(x0, cy); curve(-1); ctx.lineTo(x0 + rw, cy);
+        // pastki yarmi (teskari yo'nalishda)
+        const rev = pts.slice().reverse();
+        ctx.lineTo(rev[0][0], cy + rev[0][1]);
+        for (let i = 1; i < rev.length; i++) {
+            const mx = (rev[i - 1][0] + rev[i][0]) / 2, my = cy + (rev[i - 1][1] + rev[i][1]) / 2;
+            ctx.quadraticCurveTo(rev[i - 1][0], cy + rev[i - 1][1], mx, my);
+        }
+        ctx.lineTo(x0, cy); ctx.closePath();
+        ctx.fillStyle = grad(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.globalAlpha *= 0.6; ctx.lineWidth = Math.max(1, 1.5 * k); ctx.strokeStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(x0, cy); ctx.lineTo(x0 + rw, cy); ctx.stroke();
+    } else if (VIZ_ROUND.has(style)) {
+        // Aylana uslublari uchun umumiy o'lchamlar + zarbda tebranish
+        const live = playing && analyser;
+        const sh = live ? vizBass * vizBass * 7 * k : 0;
+        const cx = W / 2 + (Math.random() - 0.5) * sh, cy = y0 + rh / 2 + (Math.random() - 0.5) * sh;
+        const U = Math.min(rw, rh), R = U * 0.27 * (1 + vizBass * 0.1), L = U * 0.2;
+        const m = n * 2;
+        const valAt = i => vizBars[i < n ? i : 2 * n - 1 - i];      // ikki tomonga simmetrik
+        const ringPts = (rad, len, scale, rot) => {
+            const p = [];
+            for (let i = 0; i < m; i++) {
+                const a = -Math.PI / 2 + (i / m) * Math.PI * 2 + (rot || 0);
+                const rr = rad + Math.pow(valAt(i), 1.2) * len * scale;
+                p.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]);
+            }
+            return p;
+        };
+        const smoothClosed = p => {
+            ctx.beginPath();
+            const last = p[p.length - 1];
+            ctx.moveTo((last[0] + p[0][0]) / 2, (last[1] + p[0][1]) / 2);
+            for (let i = 0; i < p.length; i++) {
+                const a = p[i], b = p[(i + 1) % p.length];
+                ctx.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+            }
+            ctx.closePath();
+        };
+        if (style === 'trapnation') {
+            const layers = 6;
+            for (let l = layers - 1; l >= 0; l--) {
+                ctx.fillStyle = mixColor(c2, c1, l / (layers - 1));
+                ctx.globalAlpha = clamp(S.vizOp ?? 0.9, 0, 1) * (l === 0 ? 1 : 0.55 + 0.07 * (layers - l));
+                smoothClosed(ringPts(R, L, 1.6 - l * 0.18 + 0.15, l * 0.012)); ctx.fill();
+            }
+            ctx.globalAlpha = clamp(S.vizOp ?? 0.9, 0, 1);
+            ctx.shadowBlur = 0; ctx.fillStyle = '#05060c';
+            ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+            ctx.lineWidth = Math.max(2, 4 * k); ctx.strokeStyle = '#ffffff'; ctx.stroke();
+            vizCenter(ctx, cx, cy, R - 2 * k, k);
+        } else if (style === 'blob') {
+            const g = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R + L * 1.8);
+            g.addColorStop(0, c1); g.addColorStop(1, c2);
+            ctx.fillStyle = g; smoothClosed(ringPts(R, L, 1.7)); ctx.fill();
+            ctx.globalAlpha *= 0.45; ctx.fillStyle = '#ffffff';
+            smoothClosed(ringPts(R * 0.9, L, 0.7, Math.PI / m)); ctx.fill();
+            ctx.globalAlpha = clamp(S.vizOp ?? 0.9, 0, 1);
+            ctx.shadowBlur = 0; ctx.fillStyle = '#05060c';
+            ctx.beginPath(); ctx.arc(cx, cy, R * 0.85, 0, Math.PI * 2); ctx.fill();
+            vizCenter(ctx, cx, cy, R * 0.85, k);
+        } else if (style === 'radialwave') {
+            const mw = vizWave.length;
+            ctx.lineWidth = Math.max(2, 4 * k); ctx.lineJoin = 'round'; ctx.strokeStyle = grad();
+            for (const [sc, al] of [[1, 1], [0.55, 0.45]]) {
+                ctx.globalAlpha = clamp(S.vizOp ?? 0.9, 0, 1) * al;
+                ctx.beginPath();
+                for (let i = 0; i <= mw; i++) {
+                    const ii = i % mw, a = -Math.PI / 2 + (i / mw) * Math.PI * 2;
+                    const w = vizWave[ii] * (1 - Math.abs(ii - mw / 2) / mw * 0) ;
+                    const rr = R * 1.15 + w * L * 1.8 * sc;
+                    const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+                    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+                }
+                ctx.closePath(); ctx.stroke();
+            }
+            ctx.globalAlpha = clamp(S.vizOp ?? 0.9, 0, 1);
+            ctx.lineWidth = 2 * k; ctx.strokeStyle = c2;
+            ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+            vizCenter(ctx, cx, cy, R - 3 * k, k);
+        } else if (style === 'sunburst') {
+            const r0 = R * 0.75, maxL = Math.min(U * 0.62, Math.min(cy, H - cy) - r0 - 4 * k);
+            for (let i = 0; i < m; i++) {
+                const a = -Math.PI / 2 + (i / m) * Math.PI * 2, da = Math.PI / m * 0.8, v = valAt(i);
+                const r1 = r0 + Math.max(4 * k, v * maxL);
+                ctx.fillStyle = mixColor(c1, c2, (i < n ? i : 2 * n - 1 - i) / (n - 1 || 1));
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(a - da * 0.3) * r0, cy + Math.sin(a - da * 0.3) * r0);
+                ctx.lineTo(cx + Math.cos(a - da) * r1, cy + Math.sin(a - da) * r1);
+                ctx.lineTo(cx + Math.cos(a + da) * r1, cy + Math.sin(a + da) * r1);
+                ctx.lineTo(cx + Math.cos(a + da * 0.3) * r0, cy + Math.sin(a + da * 0.3) * r0);
+                ctx.closePath(); ctx.fill();
+            }
+            ctx.shadowBlur = 0; ctx.fillStyle = '#05060c';
+            ctx.beginPath(); ctx.arc(cx, cy, r0, 0, Math.PI * 2); ctx.fill();
+            ctx.lineWidth = 3 * k; ctx.strokeStyle = c1; ctx.stroke();
+            vizCenter(ctx, cx, cy, r0 - 2 * k, k);
+        } else if (style === 'particles') {
+            // zarrachalar orqada
+            const sb = ctx.shadowBlur; ctx.shadowBlur = 0;
+            for (const q of vizParts) {
+                const rr = R * q.d * 1.15, x = cx + Math.cos(q.a) * rr, y = cy + Math.sin(q.a) * rr;
+                if (x < -10 || y < -10 || x > W + 10 || y > H + 10) continue;
+                ctx.globalAlpha = clamp(S.vizOp ?? 0.9, 0, 1) * clamp(1.4 - (q.d - 1) / 2, 0, 1);
+                ctx.fillStyle = q.s > 1.3 ? c2 : '#ffffff';
+                ctx.beginPath(); ctx.arc(x, y, q.s * 2.2 * k * (1 + vizBass), 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.shadowBlur = sb; ctx.globalAlpha = clamp(S.vizOp ?? 0.9, 0, 1);
+            ctx.fillStyle = mixColor(c1, c2, 0.5);
+            smoothClosed(ringPts(R, L, 1.1)); ctx.fill();
+            ctx.shadowBlur = 0; ctx.fillStyle = '#05060c';
+            ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+            ctx.lineWidth = Math.max(2, 3 * k); ctx.strokeStyle = c1; ctx.stroke();
+            vizCenter(ctx, cx, cy, R - 2 * k, k);
+        }
     }
     ctx.restore();
+}
+
+// Aylana o'rtasiga kanal logotipi
+function vizCenter(ctx, cx, cy, r, k) {
+    const S = P.settings, lm = S.vizLogo && S.logoId && media.get(S.logoId);
+    if (!lm || !lm.img || r <= 4) return;
+    ctx.save();
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+    const sc = Math.max(2 * r / lm.width, 2 * r / lm.height);
+    ctx.drawImage(lm.img, cx - lm.width * sc / 2, cy - lm.height * sc / 2, lm.width * sc, lm.height * sc);
+    ctx.restore();
+}
+
+// Uslublar galereyasi (kichik rasmlar)
+function renderVizGallery() {
+    const box = $('viz-gallery'); if (!box) return;
+    if (!box.childElementCount) {
+        box.innerHTML = VIZ_STYLES.map(([key, name, , , hot]) =>
+            `<button data-act="vizPick" data-v="${key}"><canvas width="192" height="108"></canvas>${hot ? '<span class="hot">🔥</span> ' : ''}${name}</button>`).join('');
+    }
+    if (playing) { box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === P.settings.vizStyle)); return; }
+    const saved = P.settings, savedBars = vizBars, savedPeaks = vizPeaks;
+    box.querySelectorAll('button').forEach(b => {
+        const key = b.dataset.v, round = VIZ_ROUND.has(key), c = b.querySelector('canvas'), g = c.getContext('2d');
+        P.settings = { ...saved, vizStyle: key, vizOn: true, vizPos: round ? 'middle' : 'bottom', vizH: round ? 90 : 55, vizW: 92, vizN: round ? 32 : 28, vizGlow: false, vizOp: 1, logoId: '' };
+        g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+        drawViz(g, c.width, c.height, c.height / 1080 * 3);
+        b.classList.toggle('on', key === saved.vizStyle);
+    });
+    P.settings = saved; vizBars = savedBars; vizPeaks = savedPeaks;
 }
 
 function wrapLines(ctx, text, maxW) {
@@ -1925,24 +2179,36 @@ function syncSettingsUI() {
     $('sub-on').checked = S.subOn; $('sub-size').value = S.subSize; $('sub-pos').value = S.subPos;
     $('viz-on').checked = S.vizOn; $('viz-style').value = S.vizStyle; $('viz-c1').value = S.vizC1; $('viz-c2').value = S.vizC2;
     $('viz-glow').checked = S.vizGlow; $('viz-pos').value = S.vizPos; $('viz-h').value = S.vizH; $('viz-w').value = S.vizW;
-    $('viz-n').value = S.vizN; $('viz-op').value = S.vizOp; $('viz-sens').value = S.vizSens;
+    $('viz-n').value = S.vizN; $('viz-op').value = S.vizOp; $('viz-sens').value = S.vizSens; $('viz-logo').checked = S.vizLogo;
+    renderVizGallery();
     renderStyleGrid(); resizePreview();
+}
+let vizGalT = 0;
+// Uslub tanlanganda mos joy/o'lchamni avtomatik qo'yish
+function setVizStyle(v) {
+    const S = P.settings, wasRound = VIZ_ROUND.has(S.vizStyle);
+    S.vizStyle = v; S.vizOn = true; $('viz-on').checked = true; $('viz-style').value = v;
+    if (VIZ_ROUND.has(v)) {
+        if (S.vizPos !== 'middle') S.vizPos = 'middle';
+        if (S.vizH < 45) S.vizH = 55;
+    } else if (wasRound) { S.vizPos = 'bottom'; S.vizH = v === 'ribbon' || v === 'ncs' || v === 'mirror' ? 28 : 22; }
+    if (v === 'ncs' && S.vizPos === 'bottom' && wasRound) S.vizPos = 'middle';
+    $('viz-pos').value = S.vizPos; $('viz-h').value = S.vizH;
+    renderVizGallery(); drawPreview(); scheduleSave();
 }
 const SETTING_INPUTS = { 'set-res': 'res', 'set-fps': 'fps', 'set-effect': 'effect', 'set-transition': 'transition', 'set-vzoom': 'vzoom', 'set-imgdur': 'imgDur',
     'set-duck': 'duck', 'set-logo': 'logoId', 'set-logo-corner': 'logoCorner', 'set-logo-size': 'logoSize', 'set-logo-op': 'logoOp', 'sub-on': 'subOn', 'sub-size': 'subSize', 'sub-pos': 'subPos',
     'viz-on': 'vizOn', 'viz-style': 'vizStyle', 'viz-c1': 'vizC1', 'viz-c2': 'vizC2', 'viz-glow': 'vizGlow', 'viz-pos': 'vizPos',
-    'viz-h': 'vizH', 'viz-w': 'vizW', 'viz-n': 'vizN', 'viz-op': 'vizOp', 'viz-sens': 'vizSens' };
+    'viz-h': 'vizH', 'viz-w': 'vizW', 'viz-n': 'vizN', 'viz-op': 'vizOp', 'viz-sens': 'vizSens', 'viz-logo': 'vizLogo' };
 Object.entries(SETTING_INPUTS).forEach(([id, key]) => {
     const el = $(id);
     const h = () => {
         let v = el.type === 'checkbox' ? el.checked : el.value;
         if (['logoSize', 'logoOp', 'subSize', 'imgDur', 'vizH', 'vizW', 'vizN', 'vizOp', 'vizSens'].includes(key)) v = Number(v);
-        if (key === 'vizStyle' && v === 'circle' && P.settings.vizPos !== 'middle') {   // aylana o'rtada chiroyli
-            P.settings.vizPos = 'middle'; $('viz-pos').value = 'middle';
-            if (P.settings.vizH < 40) { P.settings.vizH = 50; $('viz-h').value = 50; }
-        }
+        if (key === 'vizStyle') setVizStyle(v);
         P.settings[key] = v;
         if (key === 'res') resizePreview(); else drawPreview();
+        if (key === 'vizC1' || key === 'vizC2') { clearTimeout(vizGalT); vizGalT = setTimeout(renderVizGallery, 150); }
         scheduleSave();
     };
     el.addEventListener(el.type === 'range' || el.type === 'color' ? 'input' : 'change', h);
@@ -1999,8 +2265,9 @@ const ACT = {
     vizPreset: b => {
         P.settings.vizC1 = b.dataset.c1; P.settings.vizC2 = b.dataset.c2; P.settings.vizOn = true;
         $('viz-c1').value = b.dataset.c1; $('viz-c2').value = b.dataset.c2; $('viz-on').checked = true;
-        drawPreview(); scheduleSave();
-    }
+        renderVizGallery(); drawPreview(); scheduleSave();
+    },
+    vizPick: b => setVizStyle(b.dataset.v)
 };
 document.addEventListener('click', e => {
     const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
@@ -2042,6 +2309,8 @@ window.addEventListener('beforeunload', e => { if (exporting) { e.preventDefault
 /* =========================================================
    ISHGA TUSHIRISH
    ========================================================= */
+$('viz-style').innerHTML = [...new Set(VIZ_STYLES.map(x => x[2]))].map(gr =>
+    `<optgroup label="${gr}">` + VIZ_STYLES.filter(x => x[2] === gr).map(x => `<option value="${x[0]}">${x[4] ? '🔥 ' : ''}${x[1]}</option>`).join('') + '</optgroup>').join('');
 $('set-effect').innerHTML = Object.entries(EFFECTS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('');
 try { $('hf-token').value = localStorage.getItem('hfToken') || ''; } catch (e) {}
 syncSettingsUI(); renderMediaList(); changed();
